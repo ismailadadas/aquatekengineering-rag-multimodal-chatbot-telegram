@@ -1,5 +1,7 @@
 ⚠️ Requirement 
+
 Python 3.10.11
+
 Ollama
 
 
