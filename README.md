@@ -9,6 +9,7 @@ Ollama
 Ikuti langkah cepat ini untuk menjalankan proyek di PC lokal:
 
 1. Persiapan Environment
+   
 Bash
 
 # Clone repository
@@ -25,14 +26,19 @@ python -m venv venv
 source venv/bin/activate
 
 # Install Library
+
 pip install langchain langchain-community langchain-ollama langchain-chroma docling flashrank python-telegram-bot
+
+
 2. Persiapan Model (Ollama)
+   
 Pastikan Ollama sudah terinstall dan jalankan:
 
 Bash
 
 ollama pull nomic-embed-text
 ollama pull llama3.2:1b
+
 
 3. Cara Menjalankan
 Buat Folder dan Letakkan data: Masukkan file (PDF, Gambar, CSV, Docx dll) ke folder ./data.
