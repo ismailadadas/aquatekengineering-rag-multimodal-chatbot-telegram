@@ -14,7 +14,7 @@ Bash
 
 # Clone repository
 git clone https://github.com/ismailadadas/aquatekengineering-rag-multimodal-chatbot-telegram
-cd skripsi-rag-multimodal
+
 
 # Buat virtual environment
 python -m venv venv
