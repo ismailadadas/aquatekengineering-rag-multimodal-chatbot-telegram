@@ -1,11 +1,10 @@
 import os
 import uuid
 import pickle
-# Import LangChain secara langsung ke komponen inti
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
-from langchain_core.documents import Document
-from docling.document_converter import DocumentConverter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from docling.document_converter import DocumentConverter 
 
 # --- SETUP DIREKTORI ---
 DATADIR = "./data"
@@ -29,50 +28,67 @@ vectorstore = Chroma(
 # 3. Inisialisasi Pengubah Dokumen (Docling)
 converter = DocumentConverter()
 
+# 4. Inisialisasi Text Splitter (Tahap Chunking)
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=100,
+    separators=["\n\n", "\n", " ", ""]
+)
+
 def mulai_indexing():
     if not os.path.exists(DATADIR) or not os.listdir(DATADIR):
         print("⚠️ Folder 'data' kosong! Masukkan file PDF/Gambar dulu.")
         return
 
     all_data_asli = []
-    print(f"\n=== Memulai Indexing dari folder {DATADIR} ===")
+    print(f"\n=== Memulai Indexing Multimodal General dari folder {DATADIR} ===")
 
+    # --- PROSES DATA LOADING ---
     for file_name in os.listdir(DATADIR):
+        # Mendukung berbagai format file secara general
         if file_name.lower().endswith(('.pdf', '.png', '.jpg', '.jpeg', '.xlsx', '.csv', '.docx')):
             file_path = os.path.join(DATADIR, file_name)
-            print(f"⏳ Memproses: {file_name}")
+            print(f"⏳ Memproses file: {file_name}")
             
             try:
-                # Parsing Multimodal dengan Docling
+                # --- TAHAP MULTIMODAL PARSING (DOCLING) ---
                 result = converter.convert(file_path)
                 md_text = result.document.export_to_markdown()
                 
-                # Buat ID unik untuk sinkronisasi
-                doc_id = str(uuid.uuid4())
+                # --- LOGIKA GENERAL: FILENAME AUGMENTATION ---
+                # Menyisipkan nama file agar gambar/file apapun bisa dicari berdasarkan namanya
+                full_text_with_meta = f"Nama File: {file_name}\nIsi Konten: {md_text}"
                 
-                # Simpan Summary ke ChromaDB
-                summary = md_text[:1000] # Ambil 1000 karakter pertama
-                vectorstore.add_texts(
-                    texts=[summary],
-                    metadatas=[{"doc_id": doc_id, "source": file_name}]
-                )
+                # --- TAHAP CHUNKING ---
+                chunks = text_splitter.split_text(full_text_with_meta)
+                print(f"   🧩 Berhasil memecah menjadi {len(chunks)} chunks.")
+
+                for chunk in chunks:
+                    doc_id = str(uuid.uuid4())
+                    
+                    # --- TAHAP VECTORIZATION & INDEXING (CHROMADB) ---
+                    vectorstore.add_texts(
+                        texts=[chunk],
+                        metadatas=[{"doc_id": doc_id, "source": file_name}]
+                    )
+                    
+                    # --- SIMPAN KE DOCUMENT STORE (BASESTORE) ---
+                    all_data_asli.append({
+                        "doc_id": doc_id,
+                        "content": chunk,
+                        "source": file_name
+                    })
                 
-                # Simpan Data Asli ke list untuk di-pickle (BaseStore)
-                all_data_asli.append({
-                    "doc_id": doc_id,
-                    "content": md_text,
-                    "source": file_name
-                })
-                print(f" ✅ {file_name} berhasil di-indeks.")
+                print(f" ✅ {file_name} selesai di-indeks.")
                 
             except Exception as e:
                 print(f" ❌ Gagal memproses {file_name}: {e}")
 
-    # Simpan BaseStore secara permanen
+    # Simpan BaseStore (Pickle) secara permanen
     with open(PKL_PATH, "wb") as f:
         pickle.dump(all_data_asli, f)
     
-    print(f"\n=== SELESAI! {len(all_data_asli)} dokumen tersimpan di {STORAGE} ===")
+    print(f"\n=== SELESAI! Total {len(all_data_asli)} chunks tersimpan di {STORAGE} ===")
 
 if __name__ == "__main__":
     mulai_indexing()

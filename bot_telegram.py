@@ -10,7 +10,7 @@ from engine import RAGEngine
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # --- 2. KONFIGURASI ---
-TOKEN_TELEGRAM = "TELEGRAM_BOT_TOKEN"
+TOKEN_TELEGRAM = "8231767796:AAH8hH-ezfs6ubjHu6g-pDl5t7Nw8lsPVio"
 DATA_FOLDER = "./data"
 
 try:
@@ -21,57 +21,61 @@ except Exception as e:
 
 def clean_for_html(text):
     """Membersihkan tag ilegal agar Telegram tidak error"""
-    # Menghapus tag komentar Docling seperti text = re.sub(r"", "", text)
-    # Menghapus karakter < dan > yang bukan tag HTML resmi agar tidak error parse
     text = text.replace("<", "&lt;").replace(">", "&gt;")
-    # Mengembalikan tag yang kita butuhkan untuk tabel (pre dan b)
     text = text.replace("&lt;pre&gt;", "<pre>").replace("&lt;/pre&gt;", "</pre>")
     text = text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
     return text
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_query = update.message.text
-    query_lower = user_query.lower()
     
     await update.message.reply_text("🔎 Sedang menganalisis dokumen...")
 
     try:
-        # 1. Ambil Jawaban dari AI
+        # 1. Ambil Jawaban dan Daftar Sumber dari Engine
         answer, sources = engine.generate_response(user_query)
         
-        # 2. Format Jawaban untuk Tabel
+        # 2. Format Jawaban untuk Tabel (menggunakan <pre> agar rapi)
         if "|" in answer:
             formatted_answer = f"<b>Jawaban:</b>\n<pre>{answer}</pre>"
         else:
             formatted_answer = f"<b>Jawaban:</b>\n{answer}"
             
-        # 3. Bersihkan hasil akhir sebelum dikirim
+        # 3. Bersihkan hasil akhir sebelum dikirim ke Telegram
         final_text = clean_for_html(f"{formatted_answer}\n\n<b>📚 Sumber:</b> {', '.join(sources)}")
         
-        # Kirim teks ke Telegram
+        # Kirim respons teks
         await update.message.reply_text(final_text, parse_mode=ParseMode.HTML)
 
-        # 4. LOGIKA KIRIM GAMBAR 
-        found_image = False
-        # Strategi A: Cari berdasarkan nama file di folder data yang mirip dengan query
+        # --- 4. LOGIKA KIRIM GAMBAR SECARA GENERAL (FIXED) ---
         all_files = os.listdir(DATA_FOLDER)
-        
-        # Jika user tanya piktogram atau korosif, cari file yang mengandung kata itu
-        if any(word in query_lower for word in ["piktogram", "gambar", "foto", "korosif"]):
+        found_images = []
+
+        # Mencocokkan file di folder data dengan daftar 'sources' yang diberikan Engine
+        for source_path in sources:
+            # Mengambil nama file saja (menghilangkan folder path jika ada)
+            clean_source_name = os.path.basename(source_path).lower()
+            
             for file_name in all_files:
-                if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    # Mencocokkan nama file (contoh: GHS-Piktogram-Korosif.png)
-                    if "piktogram" in file_name.lower() or "korosif" in file_name.lower():
-                        file_path = os.path.join(DATA_FOLDER, file_name)
-                        with open(file_path, 'rb') as photo:
-                            await update.message.reply_photo(photo=photo, caption=f"🖼️ Lampiran: {file_name}")
-                        found_image = True
-                        break
+                file_lower = file_name.lower()
+                # Cek jika nama file di folder data muncul dalam referensi sumber AI
+                if file_lower in clean_source_name and file_lower.endswith(('.png', '.jpg', '.jpeg')):
+                    if file_name not in found_images:
+                        found_images.append(file_name)
+
+        # Mengirimkan lampiran gambar yang relevan secara otomatis
+        for img_name in found_images:
+            file_path = os.path.join(DATA_FOLDER, img_name)
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as photo:
+                    await update.message.reply_photo(
+                        photo=photo, 
+                        caption=f"🖼️ Lampiran Referensi: {img_name}"
+                    )
 
     except Exception as e:
         logging.error(f"Error: {e}")
-        # Jika HTML gagal, kirim teks polos sebagai cadangan
-        await update.message.reply_text(f"Terjadi kendala format, ini jawabannya:\n\n{answer[:3000]}")
+        await update.message.reply_text(f"Terjadi kendala teknis saat memproses permintaan.")
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN_TELEGRAM).build()
