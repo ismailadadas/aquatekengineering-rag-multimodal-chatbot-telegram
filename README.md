@@ -1,3 +1,8 @@
+Arsitektur Sistem Multimodal RAG dengan Multi Vector Retrieval & Monitoring Arize Phoenix Studi Kasus PT. Aquatek Engineering
+
+<img width="1012" height="741" alt="image" src="https://github.com/user-attachments/assets/793b4702-0a49-4b77-b3fd-fc9fa803af35" />
+
+
 ⚠️ Requirement 
 
 Python 3.10.11
