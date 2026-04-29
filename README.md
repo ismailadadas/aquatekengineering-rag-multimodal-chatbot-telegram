@@ -4,7 +4,7 @@
 [![Model](https://img.shields.io/badge/Model-Llama_3.2_Vision-orange.svg)](https://ollama.com/)
 [![RAG](https://img.shields.io/badge/Technique-Advanced_RAG-green.svg)](https://langchain.com/)
 
-### 📄 Publikasi
+### 📄 Skirpsi
 Proyek ini merupakan bagian dari penelitian skripsi di BINUS University.
 
 Sistem ini adalah solusi chatbot cerdas berbasis **Advanced Retrieval-Augmented Generation (RAG)** yang dirancang untuk memberikan akses informasi presisi terhadap dokumen **Material Safety Data Sheets (MSDS)** pada PT Aquatek Engineering.
